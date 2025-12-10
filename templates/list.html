@@ -1,0 +1,77 @@
+{% extends "app.html" %}
+{% block content %}
+
+<h2 class="mb-4">Module List</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Seq</th>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody id="moduleTable"></tbody>
+</table>
+
+<div class="d-flex justify-content-between mt-4">
+    <button class="btn btn-dark" id="prevBtn">Previous</button>
+    <button class="btn btn-dark" id="nextBtn">Next</button>
+</div>
+
+<script>
+    let currentPage = 1;
+    const limit = 5;
+
+    function loadModules(page) {
+        fetch(`/modules?page=${page}&limit=${limit}`)
+            .then(res => res.json())
+            .then(data => {
+                let rows = "";
+                data.data.forEach(m => {
+                    rows += `
+                        <tr>
+                            <td>${m.sequence}</td>
+                            <td>${m.title}</td>
+                            <td>${m.description}</td>
+                            <td>
+                                <button class="btn btn-sm btn-warning" onclick="move(${m.id}, 'up')">↑</button>
+                                <button class="btn btn-sm btn-warning" onclick="move(${m.id}, 'down')">↓</button>
+                                <button class="btn btn-sm btn-danger" onclick="del(${m.id})">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                document.getElementById("moduleTable").innerHTML = rows;
+
+                currentPage = data.current_page;
+                document.getElementById("prevBtn").disabled = !data.prev_page;
+                document.getElementById("nextBtn").disabled = !data.next_page;
+            });
+    }
+
+    function del(id) {
+        fetch(`/modules/${id}`, { method: "DELETE" })
+            .then(res => res.json())
+            .then(() => loadModules(currentPage));
+    }
+
+    function move(id, direction) {
+        fetch(`/modules/${id}/move`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ direction })
+        })
+        .then(res => res.json())
+        .then(() => loadModules(currentPage));
+    }
+
+    document.getElementById("prevBtn").onclick = () => loadModules(currentPage - 1);
+    document.getElementById("nextBtn").onclick = () => loadModules(currentPage + 1);
+
+    loadModules(currentPage);
+</script>
+
+{% endblock %}
